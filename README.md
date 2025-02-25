@@ -44,17 +44,6 @@ This project uses:
 - Auto-rebuilding development server
 - Violentmonkey integration for live reloading
 
-### Project Structure
-
-```plain
-├── src/                  # TypeScript source
-│   └── <your code>
-├── dist/                 # Compiled output
-├── scripts/              # Build scripts
-├── server.js            # Dev server
-└── package.json
-```
-
 ### Available Commands
 
 - `pnpm dev` - Start development server with auto-rebuild
