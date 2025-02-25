@@ -139,7 +139,7 @@ function searchHydration(
           ? `"${value.length > 100 ? value.substring(0, 100) + '...' : value}"`
           : JSON.stringify(value).substring(0, 100) + (JSON.stringify(value).length > 100 ? '...' : '');
           
-        console.log(`Match at: ${path}: ${displayValue}`);
+        console.log(`Match at:\n\t${path}\n\t${displayValue}`);
       }
       console.log('Root object: ', root);
       console.groupEnd();

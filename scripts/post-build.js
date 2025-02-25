@@ -16,10 +16,17 @@ function addUserScriptHeader() {
         return;
       }
       
+      // Get name from filename (remove extension and convert to title case)
+      const baseName = path.basename(file, '.js');
+      const scriptName = baseName
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      
       // Create userscript header with @downloadURL and @updateURL for Violentmonkey tracking
       const header = `// ==UserScript==
-// @name        Get Hydration
-// @namespace   Violentmonkey Scripts
+// @name        ${scriptName}
+// @namespace   aike.dev
 // @match       *://*/*
 // @grant       none
 // @version     1.0.${Date.now()} // Use timestamp as version
@@ -44,7 +51,7 @@ function addUserScriptHeader() {
         fs.removeSync(filePath);
       }
       
-      console.log(`Added userscript header to ${newFileName}`);
+      console.log(`Added userscript header to ${newFileName} with name "${scriptName}"`);
     }
   });
 }
