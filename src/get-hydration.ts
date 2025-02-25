@@ -13,6 +13,15 @@
 function getHydration(): Record<string, any> {
   const seen = new Set();
 
+  function isHydration(obj: any): boolean {
+    // Check if it's null or not an object
+    if (obj === null || typeof obj !== 'object') return false;
+    
+    // Check if it's a plain object (created by {} or new Object())
+    const proto = Object.getPrototypeOf(obj);
+    return proto === Object.prototype || proto === null;
+  }
+
   function containsFunction(obj: any): boolean {
     if (typeof obj === 'function') return true;
 
@@ -34,8 +43,14 @@ function getHydration(): Record<string, any> {
 
   // Start traversal from window object
   for (const [key, value] of Object.entries(window)) {
+    // Skip functions
     if (typeof value === 'function') continue;
-    if (value && typeof value === 'object' && !containsFunction(value)) {
+    
+    // Skip if not a plain object that could be hydration data
+    if (!value || typeof value !== 'object' || !isHydration(value)) continue;
+    
+    // Skip if it contains functions
+    if (!containsFunction(value)) {
       // If the object doesn't contain functions and isn't empty, it might be hydration data
       if (Object.keys(value).length > 0) {
         hydrationData[key] = value;
@@ -46,7 +61,102 @@ function getHydration(): Record<string, any> {
   return hydrationData;
 }
 
-// Make the function available globally
-(window as any).getHydration = getHydration;
+/**
+ * Searches through hydration data for a specific string and returns objects containing that string.
+ * @param searchString The string to search for
+ * @param hydrationData Optional hydration data to search through. If not provided, will call getHydration()
+ * @param printReport Whether to print a formatted report to the console (default: true)
+ * @returns An object with root objects and a map of paths to the actual values found
+ */
+function searchHydration(
+  searchString: string, 
+  hydrationData?: Record<string, any>, 
+  printReport: boolean = true
+): Record<string, {root: any, matches: Record<string, any>}> {
+  const data = hydrationData || getHydration();
+  const results: Record<string, {root: any, matches: Record<string, any>}> = {};
+  const seen = new Set();
 
-console.log('Use getHydration() to get the hydration data.'); 
+  function searchInObject(obj: any, path: string, rootKey: string, rootObj: any) {
+    // Avoid circular references
+    if (obj === null || obj === undefined || seen.has(obj)) return;
+    seen.add(obj);
+
+    // For objects, search in all properties
+    if (typeof obj === 'object') {
+      for (const key in obj) {
+        const value = obj[key];
+        const newPath = path ? `${path}.${key}` : key;
+        
+        // Check if the current property is a string and contains the search string
+        if (typeof value === 'string' && value.includes(searchString)) {
+          // Initialize the result entry if it doesn't exist
+          if (!results[rootKey]) {
+            results[rootKey] = { root: rootObj, matches: {} };
+          }
+          // Store the actual value at this path
+          results[rootKey].matches[newPath] = value;
+        } else if (Array.isArray(value)) {
+          // For arrays, check each element
+          value.forEach((item, index) => {
+            if (typeof item === 'string' && item.includes(searchString)) {
+              if (!results[rootKey]) {
+                results[rootKey] = { root: rootObj, matches: {} };
+              }
+              const arrayPath = `${newPath}[${index}]`;
+              results[rootKey].matches[arrayPath] = item;
+            } else if (typeof item === 'object' && item !== null) {
+              searchInObject(item, `${newPath}[${index}]`, rootKey, rootObj);
+            }
+          });
+        } else if (typeof value === 'object' && value !== null) {
+          // Recursively search in nested objects
+          searchInObject(value, newPath, rootKey, rootObj);
+        }
+      }
+    }
+  }
+
+  // Start the search from each top-level object in hydration data
+  for (const key in data) {
+    seen.clear(); // Reset seen set for each root object
+    searchInObject(data[key], key, key, data[key]);
+  }
+
+  // Print a formatted report if requested
+  if (printReport && Object.keys(results).length > 0) {
+    console.group(`Search results for "${searchString}":`);
+    
+    let matchCount = 0;
+    for (const rootKey in results) {
+      const { matches, root } = results[rootKey];
+      
+      console.group(`Root object: ${rootKey}`);
+      for (const path in matches) {
+        matchCount++;
+        const value = matches[path];
+        const displayValue = typeof value === 'string' 
+          ? `"${value.length > 100 ? value.substring(0, 100) + '...' : value}"`
+          : JSON.stringify(value).substring(0, 100) + (JSON.stringify(value).length > 100 ? '...' : '');
+          
+        console.log(`Match at: ${path}: ${displayValue}`);
+      }
+      console.log('Root object: ', root);
+      console.groupEnd();
+    }
+    
+    console.log(`Total matches found: ${matchCount}`);
+    console.groupEnd();
+  } else if (printReport) {
+    console.log(`No matches found for "${searchString}"`);
+  }
+
+  return results;
+}
+
+// Make the functions available globally
+(window as any).getHydration = getHydration;
+(window as any).searchHydration = searchHydration;
+
+console.log('Use getHydration() to get the hydration data.');
+console.log('Use searchHydration("your search string") to find objects containing that string.'); 
