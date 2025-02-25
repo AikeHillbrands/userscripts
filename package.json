@@ -1,0 +1,22 @@
+{
+  "name": "get-hydration",
+  "version": "1.0.0",
+  "description": "UserScript to extract hydration data from web pages",
+  "main": "dist/get-hydration.user.js",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "tsc && node scripts/post-build.js"
+  },
+  "author": "AikeHillbrands",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
+    "chokidar": "^3.5.3"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "pnpm": ">=7.0.0"
+  }
+} 
